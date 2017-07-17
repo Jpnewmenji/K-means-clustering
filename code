@@ -1,0 +1,113 @@
+# K-means-clustering
+Custom code in Python
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Apr 28 10:10:08 2017
+
+@author: Newman
+"""
+
+import os
+import numpy as np
+import pandas as pd
+import matplotlib as plt
+import collections
+import string
+import scipy as sp
+from pylab import *
+import scipy.spatial.distance as spc
+import scipy.cluster.hierarchy as shc
+from sklearn import metrics
+
+#within cluster sum square distance
+def withinclus(k):
+    withincluster = 0
+    for i in range(k):
+        js=np.array(np  .where(allocation[:,0]==i))
+        js=js.T
+        for row in js:     
+         withincluster=np.linalg.norm( clusters[i,(1,2)]-allocation[row,(1,2)])+withincluster
+    print("\n withincluster =",withincluster)
+    return (withincluster)  
+#silhoutecoefficent
+def silhoutte(k, final_cluster, dataset):
+    sil=0.0
+    for cluster_number in range(k):
+        corresponding_vector=dataset[[x for x in range(len(dataset)) if final_cluster[x]==cluster_number],:]
+        A=spc.cdist(corresponding_vector,corresponding_vector)
+        A=np.mean(A,axis=1).reshape(len(A),1)
+              
+        rest_list=np.empty([len(corresponding_vector),1])
+        corr_rest=[x for x in range(k) if x!=cluster_number]
+        for rest in corr_rest:
+           
+            corresponding_rest=dataset[[x for x in range(len(dataset)) if final_cluster[x]==rest],:]
+            B=spc.cdist(corresponding_vector,corresponding_rest)
+         
+            B=np.array(np.mean(B,axis=1)).reshape(len(B),1)
+            rest_list=np.append(rest_list,B,axis=1)
+        
+        B=np.min(rest_list[:,1:],axis=1)
+        for i in range(A.shape[0]):
+            sil+=((B[i]-A[i,0])/max(set([B[i],A[i,0]])))
+    Silo=sil/(dataset.shape[0])
+    print("\n sil =",Silo)        
+    return Silo
+#NMI    
+def NMI(k):
+    Prob_mat=np.zeros((k,k))
+    for i in range(k):
+            for j in range(k):
+                Prob_mat[i,j] = np.sum((data[:,1]==i) & (allocation[:,0]==j))
+    Prob_mat= Prob_mat/len(data)
+    cla_giv=np.sum(Prob_mat,axis=1)+0.000000
+    clust=np.sum(Prob_mat,axis=0)+0.000000
+    NMI_ = 0
+    d_clas = np.sum(cla_giv*np.log(cla_giv))
+    d_clus=np.sum(clust*np.log(clust))
+    
+    def ENT(Prob,P_clas,P_clu):
+            if Prob == 0:
+                return 0
+            else:
+                return Prob*np.log((Prob)/(P_clas*P_clu))
+    for  i in  range(k):
+             for j in range(k):
+                NMI_=  ENT(Prob_mat[i,j],cla_giv[i],clust[j])+NMI_
+    NMI_ = NMI_/(-0.5*(d_clas+d_clus)) 
+    print("\n NMI =",NMI_)
+    return NMI_   
+#kmeans
+save=np.zeros((5,3))
+
+#np.random.seed(100)
+f=0 
+C=[2,4,8,16,32]
+for k in [2]:
+    Train = pd.read_csv('datahw52.csv',engine = 'python', header = None, names = ('id','class','feature1','feature2'))
+    dat1a = np.array(Train)
+    #data = data[(data[:,1] == 2)|(data[:,1] == 4)|(data[:,1] == 6)|(data[:,1] == 7) ,:] 
+    #data = data[(data[:,1] == 6)|(data[:,1] == 7) ,:]
+    #data=pca
+    clusters_index=np.random.choice(len(data),k)
+    clusters=data[clusters_index,:]
+    clusters=clusters[:,(1,2,3)]
+    x=data[:,(2,3)]
+    #k=10
+    
+    for j in range(50):
+        Eucledian = np.zeros([len(x),k])
+        #Eucledian=spc.cdist(x,clusters[:,(1,2)])
+        for i in range(k):
+            Eucledian[:,i] = np.sqrt(np.sum(np.square(x-clusters[i,(1,2)]),axis= 1))
+        allocation = np.column_stack((np.argmin(Eucledian,axis = 1),x)) 
+        for i in range(k):    
+           clusters[i,:] = np.mean(allocation[np.where(allocation[:,0]==i),:], axis = 1)
+    
+    
+    #save[f,0]=withinclus(k)
+    #save[f,1]=silhoutte(k,allocation[:,0],x)
+    #save[f,1] = metrics.silhouette_score(allocation[:,(1,2)],allocation[:,0])
+       
+    NMI(k)
+    f=f+1
